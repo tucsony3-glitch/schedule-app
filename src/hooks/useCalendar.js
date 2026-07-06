@@ -6,13 +6,21 @@ import {
 
 const BASE = 'https://www.googleapis.com/calendar/v3'
 
-export function useCalendar(accessToken) {
+export function useCalendar(accessToken, onTokenExpired) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   const headers = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }
+
+  function checkUnauthorized(res) {
+    if (res.status === 401) {
+      localStorage.removeItem('gat')
+      if (onTokenExpired) onTokenExpired()
+      throw new Error('ログインの有効期限が切れました。再度ログインしてください。')
+    }
+  }
 
   const fetchEvents = useCallback(async (date = currentDate) => {
     setLoading(true)
@@ -22,6 +30,7 @@ export function useCalendar(accessToken) {
       const end = endOfMonth(date).toISOString()
       const params = new URLSearchParams({ timeMin: start, timeMax: end, singleEvents: true, orderBy: 'startTime', maxResults: 250 })
       const res = await fetch(`${BASE}/calendars/primary/events?${params}`, { headers })
+      checkUnauthorized(res)
       if (!res.ok) throw new Error('カレンダーの読み込みに失敗しました')
       const data = await res.json()
       setEvents(data.items || [])
@@ -37,6 +46,7 @@ export function useCalendar(accessToken) {
       method: 'POST', headers,
       body: JSON.stringify(event),
     })
+    checkUnauthorized(res)
     if (!res.ok) throw new Error('イベントの作成に失敗しました')
     const created = await res.json()
     setEvents(prev => [...prev, created])
@@ -48,6 +58,7 @@ export function useCalendar(accessToken) {
       method: 'PUT', headers,
       body: JSON.stringify(event),
     })
+    checkUnauthorized(res)
     if (!res.ok) throw new Error('イベントの更新に失敗しました')
     const updated = await res.json()
     setEvents(prev => prev.map(e => e.id === id ? updated : e))
@@ -56,6 +67,7 @@ export function useCalendar(accessToken) {
 
   async function deleteEvent(id) {
     const res = await fetch(`${BASE}/calendars/primary/events/${id}`, { method: 'DELETE', headers })
+    checkUnauthorized(res)
     if (!res.ok) throw new Error('イベントの削除に失敗しました')
     setEvents(prev => prev.filter(e => e.id !== id))
   }

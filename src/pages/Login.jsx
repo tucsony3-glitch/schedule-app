@@ -2,8 +2,11 @@ import { useGoogleLogin } from '@react-oauth/google'
 import styles from './Login.module.css'
 
 export default function Login({ onLogin }) {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
   const login = useGoogleLogin({
     scope: 'https://www.googleapis.com/auth/calendar',
+    ux_mode: isIOS ? 'redirect' : 'popup',
+    redirect_uri: window.location.origin,
     onSuccess: (res) => onLogin(res.access_token),
     onError: (err) => console.error('Login failed', err),
   })

@@ -25,11 +25,13 @@ export default function EventModal({ event, defaultDate, onSave, onDelete, onClo
   })
   const [description, setDescription] = useState(isEdit ? event.description || '' : '')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (!title.trim()) return
     setSaving(true)
+    setSaveError(null)
     try {
       const payload = {
         summary: title,
@@ -39,6 +41,8 @@ export default function EventModal({ event, defaultDate, onSave, onDelete, onClo
       }
       await onSave(payload)
       onClose()
+    } catch (e) {
+      setSaveError(e.message || '保存に失敗しました')
     } finally {
       setSaving(false)
     }
@@ -47,9 +51,12 @@ export default function EventModal({ event, defaultDate, onSave, onDelete, onClo
   async function handleDelete() {
     if (!confirm('このイベントを削除しますか？')) return
     setSaving(true)
+    setSaveError(null)
     try {
       await onDelete(event.id)
       onClose()
+    } catch (e) {
+      setSaveError(e.message || '削除に失敗しました')
     } finally {
       setSaving(false)
     }
@@ -98,6 +105,11 @@ export default function EventModal({ event, defaultDate, onSave, onDelete, onClo
             onChange={e => setDescription(e.target.value)}
             rows={3}
           />
+          {saveError && (
+            <div style={{ color: '#d32f2f', fontSize: '13px', background: '#fff0f0', padding: '8px 10px', borderRadius: '8px' }}>
+              ⚠️ {saveError}
+            </div>
+          )}
           <div className={styles.actions}>
             {isEdit && (
               <button type="button" className={styles.deleteBtn} onClick={handleDelete} disabled={saving}>
